@@ -23,7 +23,12 @@ def upgrade() -> None:
         sa.Column("user_id", uuid, nullable=False),
         sa.Column("token_digest", sa.String(64), nullable=False, unique=True),
         sa.Column("csrf_token", sa.String(128), nullable=False),
-        sa.Column(\n            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False\n        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True)),
         sa.ForeignKeyConstraint(
