@@ -30,7 +30,7 @@ def issue_session(*, lifetime: timedelta = timedelta(hours=12)) -> IssuedSession
     )
 
 
-def session_is_active(*, expires_at: datetime, revoked_at: datetime | None, now: datetime | None = None) -> bool:
+def session_is_active(\n    *, expires_at: datetime, revoked_at: datetime | None, now: datetime | None = None\n) -> bool:
     current = now or datetime.now(UTC)
     return revoked_at is None and expires_at > current
 
