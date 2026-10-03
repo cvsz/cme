@@ -145,5 +145,5 @@ class AuthSession(Base):
     token_digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     csrf_token: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(\n        DateTime(timezone=True), nullable=False, index=True\n    )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
