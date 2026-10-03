@@ -75,9 +75,7 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index(
-        "ix_inventory_movements_tenant_id", "inventory_movements", ["tenant_id"]
-    )
+    op.create_index("ix_inventory_movements_tenant_id", "inventory_movements", ["tenant_id"])
     op.create_index("ix_inventory_movements_sku", "inventory_movements", ["sku"])
 
 
