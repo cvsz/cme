@@ -1,11 +1,6 @@
 from pathlib import Path
 
-MIGRATION = (
-    Path(__file__).parents[1]
-    / "migrations"
-    / "versions"
-    / "0002_tenant_integrity.py"
-)
+MIGRATION = Path(__file__).parents[1] / "migrations" / "versions" / "0002_tenant_integrity.py"
 
 
 def test_tenant_integrity_migration_is_forward_only_from_core():
