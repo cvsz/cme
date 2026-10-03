@@ -47,9 +47,7 @@ class AuditEvent(Base):
     actor_user_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
     action: Mapped[str] = mapped_column(String(120))
     entity_type: Mapped[str] = mapped_column(String(120))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ChartAccount(Base):
@@ -58,9 +56,7 @@ class ChartAccount(Base):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
-    organization_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), nullable=False, index=True
-    )
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(200))
     account_type: Mapped[str] = mapped_column(String(32))
@@ -74,6 +70,4 @@ class InventoryMovement(Base):
     sku: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     movement_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
