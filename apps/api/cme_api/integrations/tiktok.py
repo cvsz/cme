@@ -55,9 +55,7 @@ class TikTokClient:
             raise TikTokTransportError("unexpected TikTok response")
         error = payload.get("error")
         if isinstance(error, dict) and error.get("code") not in (None, "", "ok"):
-            raise TikTokTransportError(
-                "TikTok rejected request: " + str(error.get("code"))[:70]
-            )
+            raise TikTokTransportError("TikTok rejected request: " + str(error.get("code"))[:70])
         return payload
 
     async def exchange(self, code: str):
