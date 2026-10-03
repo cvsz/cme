@@ -1,183 +1,87 @@
-# zTemplate
+# CMe CheerTsuMe' Enterprise Platform ERP
 
-A reusable, security-oriented GitHub project starting point with governance, engineering guidance, CI, AI-agent operating rules, repository validation, and an automated GitHub administration gate.
+CMe is a production-structured commerce and ERP platform being built on the ZEAZ secure repository baseline. It combines ERP operations, commerce workflows, AI-assisted content production, analytics, automation, and an administration control plane.
 
-This repository is a **template foundation**, not a deployable application. A repository generated from it still requires stack-specific implementation, deployment, recovery, observability, and security evidence before that application can be called production ready.
+> Current state: repository foundation and application architecture are implemented as versioned project configuration/documentation. Application services are not yet production-verified. Readiness claims require exact-head test and operational evidence.
 
-## Create a new project
+## Target stack
 
-1. Click **Use this template** on GitHub and clone the generated repository.
-2. Preview project initialization:
+- Next.js + TypeScript for web/admin
+- FastAPI + Python for APIs and workers
+- PostgreSQL for transactional data
+- Redis for cache/queues
+- MinIO/S3-compatible object storage
+- n8n for workflow orchestration
+- FFmpeg for media processing
+- Local CPU-capable AI by default; external AI providers are optional adapters
+- Docker Compose for local-first deployment
+- k3s/Kubernetes as the scale path
 
-   ```bash
-   python3 scripts/bootstrap.py --name my-service --owner my-org --codeowner my-org/maintainers --description 'New service'
-   ```
+## Product domains
 
-3. Apply explicitly, inspect the diff, and review ownership/security files:
+ERP scope includes PIM/SKU, inventory, warehouse, procurement, suppliers, manufacturing/BOM, lot/batch traceability, quality, sales/OMS, fulfillment, returns, CRM, accounting/GL/AP/AR, billing, multi-company, multi-branch, multi-currency and enterprise analytics.
 
-   ```bash
-   python3 scripts/bootstrap.py --name my-service --owner my-org --codeowner my-org/maintainers --description 'New service' --apply
-   make validate-template
-   ```
+Commerce scope includes TikTok integration boundaries, content workflows, AI-assisted scripts/captions/localization, media jobs, content calendar, analytics, automation and admin controls.
 
-4. Select an optional [project profile](docs/profiles.md), replace placeholder `Makefile` / `Dockerfile`, and complete the [Implementation Checklist](IMPLEMENTATION-CHECKLIST.md).
-5. Configure and verify repository administration controls from an authenticated GitHub admin identity:
+## Architecture and setup
 
-   ```bash
-   python3 scripts/github_admin.py --repo my-org/my-service --apply
-   ```
+Read these before implementation:
 
-6. Add stack-specific CI, security, release, deployment, backup/restore, rollback, monitoring, and operational evidence.
+- [Enterprise platform architecture](docs/cme-enterprise-platform.md)
+- [ERP domain model](docs/erp-domain-model.md)
+- [Deployment target](docs/deployment-target.md)
+- [Integration boundaries](docs/integrations.md)
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
+- [Security policy](SECURITY.md)
+- [Implementation checklist](IMPLEMENTATION-CHECKLIST.md)
+- [Roadmap](ROADMAP.md)
 
-See the complete [startup guide](docs/startup.md).
-
-## Included
-
-- Issue and pull request templates
-- CODEOWNERS and governance guidance
-- Security and support policies
-- CI repository-baseline validation
-- CodeQL security scanning
-- Dependency Review
-- Dependabot configuration
-- Immutable SHA pinning for baseline GitHub Actions
-- Release guidance and release-note configuration
-- Repository structure and local Markdown-link validation
-- GitHub administration automation with read-back verification
-- Conventional commit / PR guidance
-- Documentation, ADR, changelog, and roadmap structure
-- Environment example
-- Docker and Makefile placeholders
-- Cloudflare/Terraform ownership contract
-- Cross-agent ZEAZ engineering execution layer
-- Reusable skill/catalog structure
-
-## Repository administration gate
-
-`scripts/github_admin.py` is dry-run by default.
-
-Apply and verify:
+### Repository baseline validation
 
 ```bash
-python3 scripts/github_admin.py --repo OWNER/REPO --apply
+make validate-template
 ```
 
-Verify without mutation:
+The inherited application `setup/lint/test/build/security` Make targets remain gates: they must be replaced with real stack-specific commands as implementation lands. A placeholder target is not treated as success.
+
+### GitHub administration
+
+Preview/verify repository controls with the inherited administration helper and an authenticated repository administrator:
 
 ```bash
-python3 scripts/github_admin.py --repo OWNER/REPO --verify
+python3 scripts/github_admin.py --repo cvsz/cme --verify
 ```
 
-The helper is designed to enforce or verify:
+Apply only after reviewing the planned changes:
 
-- pull-request review before merge
-- CODEOWNERS review
-- stale-review dismissal
-- approval after the latest push
-- conversation resolution
-- strict required status checks
-- administrator enforcement
-- no force pushes
-- no protected-branch deletion
-- Dependabot vulnerability alerts/security fixes
-- private vulnerability reporting
-- secret scanning/push protection when available
-- read-only default Actions token permissions
-- Actions cannot approve pull requests
-
-Presence of this script is not evidence that a generated repository is configured. The effective settings must be read back successfully.
-
-See [GitHub repository administration gate](docs/ai/guides/github-repository-admin.md).
-
-## AI engineering execution layer
-
-- [ZEAZ engineering execution framework](ZEAZ-INTRODUCTION.md)
-- [Repository agent contract](AGENTS.md)
-- [Claude Code instructions](CLAUDE.md)
-- [OpenCode instructions](OPENCODE.md)
-- [Reusable AI playbooks and prompts](docs/ai/README.md)
-- [ECC integration](docs/ai/guides/ecc-integration.md)
-- [ZEAZ skills catalog](skills/README.md)
-
-These files guide execution and evidence handling. They are not production-readiness evidence by themselves.
-
-## DNS and public hostnames
-
-Do not add duplicate Cloudflare/DNS ownership to a generated project. Public DNS and shared tunnel ingress must have one designated owning repository.
-
-See [Cloudflare and Terraform ownership](docs/cloudflare-terraform.md).
-
-## Template limitations
-
-- Baseline CI validates template structure and bootstrap behavior; generated projects must add real application lint/build/test/security checks.
-- The included Dockerfile and application Makefile targets are placeholders and must not ship unchanged.
-- Shared infrastructure remains owned by the designated infrastructure repository.
-- `scripts/github_admin.py` requires an authenticated GitHub identity with repository Administration permission.
-- A green CI run proves only the checks that actually ran; it does not prove application production readiness.
-- Generated repositories must independently verify deployment, rollback, backup/restore, observability, security, capacity, and incident-response gates that apply to the real system.
-
-## Repository structure
-
-```text
-.github/
-  ISSUE_TEMPLATE/
-  workflows/
-  CODEOWNERS
-  PULL_REQUEST_TEMPLATE.md
-  dependabot.yml
-  release.yml
-docs/
-  adr/
-  ai/
-    guides/
-    playbooks/
-    prompts/
-  architecture.md
-  development.md
-  release.md
-  repository-rollout.md
-  startup.md
-scripts/
-  bootstrap.py
-  github_admin.py
-  validate_repo.py
-skills/
-components.d/
-plugins.d/
-AGENTS.md
-CLAUDE.md
-OPENCODE.md
-ZEAZ-INTRODUCTION.md
-ecc-install.json
-CHANGELOG.md
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-GOVERNANCE.md
-IMPLEMENTATION-CHECKLIST.md
-LICENSE
-Makefile
-README.md
-ROADMAP.md
-SECURITY.md
+```bash
+python3 scripts/github_admin.py --repo cvsz/cme --apply
 ```
 
-## Principles
+## Security rules
 
-- Secure by default
-- Least privilege
-- Immutable/reproducible automation where practical
-- Small, reviewable pull requests
-- Documentation as part of delivery
-- Evidence-backed readiness claims
-- No weakening of security gates merely to make CI green
-- Explicit rollback/recovery practices
-- Repository-specific policy is preserved when rolling the baseline into existing projects
+- Never commit credentials, tokens, private keys or production secrets.
+- Enforce tenant isolation on every tenant-scoped operation.
+- Encrypt external provider tokens at rest.
+- Use least-privilege service credentials and GitHub Actions permissions.
+- Admin operations are allowlisted and audited; the UI must not expose arbitrary shell execution.
+- Billing webhooks are signature-verified and idempotent.
+- TikTok capabilities use supported official APIs and explicit user authorization.
+- Generated/third-party content is untrusted input.
 
-## Rollout to existing repositories
+## Delivery policy
 
-Do not bulk-copy this template over an established repository.
+CMe follows the ZEAZ evidence states. Documentation is design evidence, committed code is implementation evidence, and a feature becomes verified only after relevant checks pass on the exact commit. Production readiness additionally requires deployment, rollback, backup/restore, security, capacity, observability and incident-response evidence.
 
-Use the [repository rollout guide](docs/repository-rollout.md) to audit the target first and port only missing compatible controls.
+## Development workflow
+
+1. Read `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md` and the relevant design docs.
+2. Work on a reviewable feature branch.
+3. Add tests with implementation where practical.
+4. Run relevant validation/security checks.
+5. Update documentation and migration/rollback notes.
+6. Open a PR and merge only with required exact-head checks satisfied.
 
 ## License
 

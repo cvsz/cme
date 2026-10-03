@@ -1,55 +1,33 @@
-# Architecture
+# CMe Enterprise Platform Architecture
 
 ## Purpose
 
-`ztemplate` is a language-agnostic repository foundation rather than an application runtime.
+CMe is a modular commerce and ERP application. Repository governance is inherited from the ZEAZ baseline, while runtime implementation is CMe-specific.
 
-Its architecture is intentionally layered so generated projects can replace application-specific pieces without weakening repository governance.
+## Runtime layers
 
-## Layers
+### Web and administration
+Next.js/TypeScript is the target user/admin surface.
 
-### Repository governance
+### API and domain
+FastAPI/Python owns authenticated application APIs and ERP domain rules. Domain invariants must not depend on HTTP handlers.
 
-Root policy documents define ownership, contribution, security, evidence, and release expectations:
+### Data
+PostgreSQL is the transactional system of record. Redis supports queues/cache and MinIO/S3-compatible storage holds media/object payloads.
 
-- `AGENTS.md`
-- `ZEAZ-INTRODUCTION.md`
-- `GOVERNANCE.md`
-- `SECURITY.md`
-- `CONTRIBUTING.md`
+### Workers and automation
+Background workers execute asynchronous jobs. n8n may orchestrate workflows but never owns authorization or bypasses application policy.
 
-### GitHub control plane
+### ERP invariants
+Inventory uses an append-only movement ledger with derived balances. Accounting uses balanced double-entry journals. Tenant/company/branch boundaries are explicit on persisted business records.
 
-`.github/` provides CI/security/community baselines.
+### Integrations
+External integrations use provider adapters, encrypted credentials, idempotent operations and audit events. TikTok capabilities are limited to approved official APIs/scopes.
 
-`scripts/github_admin.py` handles repository settings that cannot be enforced by committed files alone and verifies effective provider state after mutation.
+## Repository control plane
 
-### Validation
-
-`scripts/validate_repo.py` checks required template structure and local Markdown links.
-
-`tests/` validates bootstrap behavior.
-
-Application-specific lint/test/build/security validation must be added by generated projects.
-
-### Project initialization
-
-`scripts/bootstrap.py` changes project identity/ownership routing only. It does not create application architecture or deploy infrastructure.
-
-### AI/agent execution
-
-`docs/ai/`, `skills/`, `components.d/`, and `plugins.d/` provide reusable agent execution guidance and discovery without making application-runtime assumptions.
-
-### Application placeholders
-
-The root Dockerfile and application Makefile targets are intentionally non-production placeholders. Generated projects replace them with stack-specific implementations.
-
-## Existing-repository adoption
-
-The architecture is composable. Established repositories should use [repository rollout](repository-rollout.md) and port only compatible missing layers rather than copying the tree wholesale.
+AGENTS.md, SECURITY.md, GOVERNANCE.md, CI workflows and scripts/github_admin.py remain the governance layer. Their presence is not production evidence; effective state and exact-head checks must be verified.
 
 ## Production boundary
 
-Repository-foundation readiness and application production readiness are separate claims.
-
-The template can verify repository controls, documentation structure, and baseline automation. A generated application must independently verify runtime architecture, deployment, data, recovery, observability, capacity, security, and incident-response gates that apply to it.
+A committed capability is IMPLEMENTED. It is VERIFIED only after its applicable tests/checks pass on the exact commit. Production readiness additionally requires deployment, recovery, security, observability and capacity evidence.

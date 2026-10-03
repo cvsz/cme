@@ -1,7 +1,20 @@
-# Generic placeholder Dockerfile.
-# Replace with the runtime-specific build for the generated project.
-FROM alpine:3.24
+FROM python:3.12-slim AS runtime
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN addgroup --system cme && adduser --system --ingroup cme cme
 WORKDIR /app
 
-CMD ["sh", "-c", "echo 'Replace Dockerfile with your project runtime image and command.'"]
+COPY apps/api/pyproject.toml ./pyproject.toml
+COPY apps/api/cme_api ./cme_api
+RUN pip install --no-cache-dir .
+
+USER cme
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+
+CMD ["uvicorn", "cme_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
