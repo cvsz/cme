@@ -38,7 +38,5 @@ def summarize_funnel(events: list[AnalyticsEvent]) -> dict[str, float]:
         "click_through_rate": (
             counts["click"] / counts["impression"] if counts["impression"] else 0.0
         ),
-        "conversion_rate": (
-            counts["conversion"] / counts["click"] if counts["click"] else 0.0
-        ),
+        "conversion_rate": (counts["conversion"] / counts["click"] if counts["click"] else 0.0),
     }
