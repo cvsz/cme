@@ -67,12 +67,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "fk_inventory_movements_tenant", "inventory_movements", type_="foreignkey"
-    )
-    op.drop_constraint(
-        "fk_chart_accounts_organization", "chart_accounts", type_="foreignkey"
-    )
+    op.drop_constraint("fk_inventory_movements_tenant", "inventory_movements", type_="foreignkey")
+    op.drop_constraint("fk_chart_accounts_organization", "chart_accounts", type_="foreignkey")
     op.drop_constraint("fk_audit_events_actor", "audit_events", type_="foreignkey")
     op.drop_constraint("fk_audit_events_tenant", "audit_events", type_="foreignkey")
     op.drop_constraint("fk_users_tenant", "users", type_="foreignkey")
