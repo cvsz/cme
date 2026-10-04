@@ -49,8 +49,7 @@ class SessionService:
             select(AuthSession)
             .join(
                 User,
-                (User.tenant_id == AuthSession.tenant_id)
-                & (User.id == AuthSession.user_id),
+                (User.tenant_id == AuthSession.tenant_id) & (User.id == AuthSession.user_id),
             )
             .where(
                 AuthSession.token_digest == digest,
