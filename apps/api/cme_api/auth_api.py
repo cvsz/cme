@@ -31,21 +31,15 @@ class SessionIdentity(BaseModel):
 
 
 def _set_auth_cookies(response: Response, *, token: str, csrf_token: str) -> None:
-    response.set_cookie(
-        SESSION_COOKIE, token, httponly=True, secure=True, samesite="lax", path="/"
-    )
+    response.set_cookie(SESSION_COOKIE, token, httponly=True, secure=True, samesite="lax", path="/")
     response.set_cookie(
         CSRF_COOKIE, csrf_token, httponly=False, secure=True, samesite="lax", path="/"
     )
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie(
-        SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax"
-    )
-    response.delete_cookie(
-        CSRF_COOKIE, path="/", secure=True, httponly=False, samesite="lax"
-    )
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+    response.delete_cookie(CSRF_COOKIE, path="/", secure=True, httponly=False, samesite="lax")
 
 
 def _require_csrf(csrf_cookie: str | None, csrf_header: str | None) -> None:
