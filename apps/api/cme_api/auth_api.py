@@ -70,7 +70,9 @@ def _rate_limit_login(request: Request, email: str) -> None:
         while attempts and now - attempts[0] >= _LOGIN_WINDOW_SECONDS:
             attempts.popleft()
         if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-            raise HTTPException(\n                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="too many attempts"\n            )
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="too many attempts"
+            )
         attempts.append(now)
 
 
@@ -89,7 +91,9 @@ def _session(db: Session, token: str | None) -> AuthSession:
 def login(payload: LoginRequest, request: Request, response: Response, db: Db) -> SessionIdentity:
     _rate_limit_login(request, payload.email)
     users = list(
-        db.scalars(\n            select(User).where(User.email == payload.email, User.is_active.is_(True)).limit(2)\n        )
+        db.scalars(
+            select(User).where(User.email == payload.email, User.is_active.is_(True)).limit(2)
+        )
     )
     if not users:
         verify_password(payload.password, _DUMMY_HASH)
