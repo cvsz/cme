@@ -86,7 +86,7 @@ class SessionService:
         record, issued = self.create(
             tenant_id=previous.tenant_id,
             user_id=previous.user_id,
-            lifetime=max(previous.expires_at - now, timedelta(minutes=1)),
+            expires_at=previous.expires_at,
         )
         self.db.flush()
         return record, issued
