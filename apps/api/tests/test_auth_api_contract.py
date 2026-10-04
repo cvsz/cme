@@ -33,3 +33,27 @@ def test_identity_is_resolved_from_persisted_session():
     assert "SessionService(db).authenticate(token=token)" in source
     me = source[source.index("def me(") : source.index('@router.post("/rotate"')]
     assert "tenant_id:" not in me
+
+
+def test_session_cookie_uses_host_only_prefix():
+    source = AUTH_API.read_text()
+    assert 'SESSION_COOKIE = "__Host-cme_session"' in source
+
+
+def test_login_is_rate_limited_before_password_verification():
+    source = AUTH_API.read_text()
+    login = source[source.index("def login(") : source.index('@router.get("/me"')]
+    assert login.index("_rate_limit_login") < login.index("verify_password")
+
+
+def test_unknown_email_uses_dummy_password_hash():
+    source = AUTH_API.read_text()
+    assert "_DUMMY_HASH = hash_password" in source
+    assert "verify_password(payload.password, _DUMMY_HASH)" in source
+
+
+def test_identity_response_disables_caching():
+    source = AUTH_API.read_text()
+    me = source[source.index("def me(") : source.index('@router.post("/rotate"')]
+    assert "_set_no_store(response)" in me
+    assert '"Cache-Control"] = "no-store"' in source
