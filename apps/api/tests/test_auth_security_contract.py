@@ -15,8 +15,8 @@ def test_auth_cookies_are_secure_and_session_cookie_is_http_only():
     source = AUTH_API.read_text()
     setter = _function_source(source, "_set_auth_cookies", "_clear_auth_cookies")
     session_call, csrf_call = setter.split("response.set_cookie(", 2)[1:]
-    assert 'SESSION_COOKIE, token, httponly=True, secure=True' in session_call
-    assert 'CSRF_COOKIE, csrf_token, httponly=False, secure=True' in csrf_call
+    assert "SESSION_COOKIE, token, httponly=True, secure=True" in session_call
+    assert "CSRF_COOKIE, csrf_token, httponly=False, secure=True" in csrf_call
     assert 'samesite="lax"' in session_call
     assert 'samesite="lax"' in csrf_call
 
