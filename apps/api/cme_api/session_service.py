@@ -24,8 +24,16 @@ class SessionService:
         tenant_id: UUID,
         user_id: UUID,
         lifetime: timedelta = timedelta(hours=12),
+        expires_at: datetime | None = None,
     ) -> tuple[AuthSession, IssuedSession]:
         issued = issue_session(lifetime=lifetime)
+        if expires_at is not None:
+            issued = IssuedSession(
+                token=issued.token,
+                token_digest=issued.token_digest,
+                csrf_token=issued.csrf_token,
+                expires_at=expires_at,
+            )
         record = AuthSession(
             tenant_id=tenant_id,
             user_id=user_id,
@@ -81,12 +89,11 @@ class SessionService:
         self, *, token: str, tenant_id: UUID | None = None
     ) -> tuple[AuthSession, IssuedSession]:
         previous = self._authenticate(token=token, tenant_id=tenant_id, for_update=True)
-        now = datetime.now(UTC)
-        previous.revoked_at = now
+        previous.revoked_at = datetime.now(UTC)
         record, issued = self.create(
             tenant_id=previous.tenant_id,
             user_id=previous.user_id,
-            lifetime=max(previous.expires_at - now, timedelta(minutes=1)),
+            expires_at=previous.expires_at,
         )
         self.db.flush()
         return record, issued
