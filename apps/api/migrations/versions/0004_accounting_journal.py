@@ -67,9 +67,25 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
     )
+    op.execute("""
+        CREATE FUNCTION reject_journal_mutation() RETURNS trigger AS $
+        BEGIN
+            RAISE EXCEPTION 'posted journals are immutable';
+        END;
+        $ LANGUAGE plpgsql
+    """)
+    for table in ("journal_entries", "journal_lines"):
+        op.execute(
+            f"CREATE TRIGGER {table}_immutable "
+            f"BEFORE UPDATE OR DELETE ON {table} "
+            "FOR EACH ROW EXECUTE FUNCTION reject_journal_mutation()"
+        )
 
 
 def downgrade() -> None:
+    for table in ("journal_lines", "journal_entries"):
+        op.execute(f"DROP TRIGGER IF EXISTS {table}_immutable ON {table}")
+    op.execute("DROP FUNCTION IF EXISTS reject_journal_mutation()")
     op.drop_table("journal_lines")
     op.drop_table("journal_entries")
     op.drop_constraint("uq_chart_accounts_scope", "chart_accounts", type_="unique")
