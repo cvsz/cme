@@ -1,14 +1,13 @@
+import os
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
-
-import os
 
 import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, text
-from testcontainers.postgres import PostgresContainer
 from sqlalchemy.orm import Session
+from testcontainers.postgres import PostgresContainer
 
 from cme_api.config import get_settings
 from cme_api.models import Tenant, User
@@ -55,7 +54,7 @@ def _user(db: Session) -> tuple[Tenant, User]:
     db.add(tenant)
     db.flush()
     user = User(
-    tenant_id=tenant.id,
+        tenant_id=tenant.id,
         email=f"{uuid4()}@example.test",
         password_hash=hash_password("integration-password"),
     )
@@ -65,11 +64,11 @@ def _user(db: Session) -> tuple[Tenant, User]:
 
 
 def test_alembic_migrated_auth_session_table_exists(db):
-        count = db.execute(
-            text(
-                "select count(*) from information_schema.tables where table_name = 'auth_sessions'"
-            )
-        ).scalar_one()
+    count = db.execute(
+        text(
+            "select count(*) from information_schema.tables where table_name = 'auth_sessions'"
+        )
+    ).scalar_one()
     assert count == 1
 
 
@@ -78,21 +77,21 @@ def test_session_rotation_preserves_absolute_expiry(db):
     service = SessionService(db)
     absolute_expiry = datetime.now(UTC) + timedelta(seconds=30)
     _, issued = service.create(
-            tenant_id=tenant.id,
-            user_id=user.id,
-            expires_at=absolute_expiry,
-        )
+        tenant_id=tenant.id,
+        user_id=user.id,
+        expires_at=absolute_expiry,
+    )
 
     replacement, replacement_issued = service.rotate(
-            token=issued.token,
-            tenant_id=tenant.id,
-        )
+        token=issued.token,
+        tenant_id=tenant.id,
+    )
 
     assert replacement.expires_at == absolute_expiry
     assert replacement_issued.expires_at == absolute_expiry
     assert replacement.token_digest != replacement_issued.token
     with pytest.raises(InvalidSessionError):
-            service.authenticate(token=issued.token, tenant_id=tenant.id)
+        service.authenticate(token=issued.token, tenant_id=tenant.id)
 
 
 def test_session_authentication_fails_closed_across_tenants(db):
@@ -104,7 +103,7 @@ def test_session_authentication_fails_closed_across_tenants(db):
     _, issued = service.create(tenant_id=tenant.id, user_id=user.id)
 
     with pytest.raises(InvalidSessionError):
-            service.authenticate(token=issued.token, tenant_id=other_tenant.id)
+        service.authenticate(token=issued.token, tenant_id=other_tenant.id)
 
     assert service.authenticate(token=issued.token, tenant_id=tenant.id).user_id == user.id
 
@@ -117,4 +116,4 @@ def test_disabled_user_cannot_reuse_existing_session(db):
     db.flush()
 
     with pytest.raises(InvalidSessionError):
-            service.authenticate(token=issued.token, tenant_id=tenant.id)
+        service.authenticate(token=issued.token, tenant_id=tenant.id)
