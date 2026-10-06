@@ -5,4 +5,4 @@ set -eu
 umask 077
 pg_dump --format=custom --no-owner --no-acl --dbname="$CME_DATABASE_URL" --file="$CME_BACKUP_FILE"
 pg_restore --list "$CME_BACKUP_FILE" >/dev/null
-sha256sum "$CME_BACKUP_FILE" >"$CME_BACKUP_FILE.sha256"
+sha256sum "$CME_BACKUP_FILE" | awk '{print $1}' >"$CME_BACKUP_FILE.sha256"
