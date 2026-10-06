@@ -1,6 +1,8 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from cme_api.auth import Principal
@@ -9,6 +11,15 @@ from cme_api.models import ChartAccount, JournalEntry, JournalLine
 
 class AccountingError(ValueError):
     pass
+
+
+_CENT = Decimal("0.01")
+
+
+def _money(value: Decimal) -> Decimal:
+    if not value.is_finite() or value.quantize(_CENT) != value:
+        raise AccountingError("journal amounts require at most two decimal places")
+    return value
 
 
 def list_accounts(db: Session, principal: Principal) -> list[ChartAccount]:
@@ -28,8 +39,8 @@ def list_accounts(db: Session, principal: Principal) -> list[ChartAccount]:
 def assert_balanced(lines: list[tuple[Decimal, Decimal]]) -> None:
     if len(lines) < 2:
         raise AccountingError("journal entry requires at least two lines")
-    debit = sum((debit for debit, _ in lines), Decimal(0))
-    credit = sum((credit for _, credit in lines), Decimal(0))
+    debit = sum((_money(debit) for debit, _ in lines), Decimal(0))
+    credit = sum((_money(credit) for _, credit in lines), Decimal(0))
     if debit != credit:
         raise AccountingError("journal entry is not balanced")
 
@@ -46,33 +57,48 @@ def post_journal(
         raise AccountingError("organization is required")
     if not idempotency_key or len(idempotency_key) > 128:
         raise AccountingError("invalid idempotency key")
-    amounts = [(debit, credit) for _, debit, credit in lines]
-    assert_balanced(amounts)
-    for account, debit, credit in lines:
-        if account.tenant_id != principal.tenant_id or account.organization_id != principal.organization_id:
+
+    normalized = [(account, _money(debit), _money(credit)) for account, debit, credit in lines]
+    assert_balanced([(debit, credit) for _, debit, credit in normalized])
+    for account, debit, credit in normalized:
+        if (
+            account.tenant_id != principal.tenant_id
+            or account.organization_id != principal.organization_id
+        ):
             raise AccountingError("account is outside principal scope")
         if debit < 0 or credit < 0 or (debit == 0) == (credit == 0):
             raise AccountingError("each line must contain exactly one positive side")
 
-    existing = db.scalar(
-        select(JournalEntry).where(
-            JournalEntry.tenant_id == principal.tenant_id,
-            JournalEntry.organization_id == principal.organization_id,
-            JournalEntry.idempotency_key == idempotency_key,
+    statement = (
+        insert(JournalEntry)
+        .values(
+            tenant_id=principal.tenant_id,
+            organization_id=principal.organization_id,
+            idempotency_key=idempotency_key,
+            description=description,
         )
+        .on_conflict_do_nothing(
+            index_elements=["tenant_id", "organization_id", "idempotency_key"]
+        )
+        .returning(JournalEntry.id)
     )
-    if existing is not None:
+    entry_id = db.scalar(statement)
+    if entry_id is None:
+        existing = db.scalar(
+            select(JournalEntry).where(
+                JournalEntry.tenant_id == principal.tenant_id,
+                JournalEntry.organization_id == principal.organization_id,
+                JournalEntry.idempotency_key == idempotency_key,
+            )
+        )
+        if existing is None:
+            raise AccountingError("idempotent journal lookup failed")
         return existing
 
-    entry = JournalEntry(
-        tenant_id=principal.tenant_id,
-        organization_id=principal.organization_id,
-        idempotency_key=idempotency_key,
-        description=description,
-    )
-    db.add(entry)
-    db.flush()
-    for account, debit, credit in lines:
+    entry = db.get(JournalEntry, entry_id)
+    if entry is None:
+        raise AccountingError("journal creation failed")
+    for account, debit, credit in normalized:
         db.add(
             JournalLine(
                 tenant_id=principal.tenant_id,
@@ -83,5 +109,7 @@ def post_journal(
                 credit=credit,
             )
         )
+    db.flush()
+    entry.posted_at = datetime.now(UTC)
     db.flush()
     return entry
