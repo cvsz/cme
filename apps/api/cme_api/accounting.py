@@ -77,9 +77,7 @@ def post_journal(
             idempotency_key=idempotency_key,
             description=description,
         )
-        .on_conflict_do_nothing(
-            index_elements=["tenant_id", "organization_id", "idempotency_key"]
-        )
+.on_conflict_do_nothing(index_elements=["tenant_id", "organization_id", "idempotency_key"])
         .returning(JournalEntry.id)
     )
     entry_id = db.scalar(statement)
