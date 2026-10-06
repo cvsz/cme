@@ -65,9 +65,7 @@ def _user(db: Session) -> tuple[Tenant, User]:
 
 def test_alembic_migrated_auth_session_table_exists(db):
     count = db.execute(
-        text(
-            "select count(*) from information_schema.tables where table_name = 'auth_sessions'"
-        )
+        text("select count(*) from information_schema.tables where table_name = 'auth_sessions'")
     ).scalar_one()
     assert count == 1
 
