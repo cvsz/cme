@@ -6,6 +6,7 @@ on:
       - "apps/api/**"
       - "scripts/backup-postgres.sh"
       - "scripts/restore-postgres.sh"
+      - "scripts/backup-postgres.sh"
       - "Dockerfile"
       - ".github/workflows/dr-supply-chain.yml"
       - "docs/disaster-recovery.md"
