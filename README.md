@@ -2,7 +2,7 @@
 
 CMe is a production-structured commerce and ERP platform being built on the ZEAZ secure repository baseline. It combines ERP operations, commerce workflows, AI-assisted content production, analytics, automation, and an administration control plane.
 
-> Current state: repository foundation and application architecture are implemented as versioned project configuration/documentation. Application services are not yet production-verified. Readiness claims require exact-head test and operational evidence.
+> Current state: core API production-hardening gates are implemented and continuously verified in CI. Repository evidence includes PostgreSQL behavioral tests, auth/accounting controls, readiness, observability, isolated restore, SBOM/container scanning, and fresh-clone verification. Environment-specific deployment, rollback, RPO/RTO, DNS/TLS, capacity, and alert-delivery gates still require production-equivalent evidence.
 
 ## Target stack
 
@@ -36,6 +36,8 @@ Read these before implementation:
 - [Security policy](SECURITY.md)
 - [Implementation checklist](IMPLEMENTATION-CHECKLIST.md)
 - [Roadmap](ROADMAP.md)
+- [Release evidence](docs/release-evidence.md)
+- [Disaster recovery](docs/disaster-recovery.md)
 
 ### Repository baseline validation
 
