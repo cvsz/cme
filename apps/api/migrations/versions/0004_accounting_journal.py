@@ -27,12 +27,12 @@ def upgrade() -> None:
         sa.Column("description", sa.String(500), nullable=False),
         sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
         sa.UniqueConstraint(
-            "tenant_id", "organization_id", "idempotency_key",
+            "tenant_id",
+            "organization_id",
+            "idempotency_key",
             name="uq_journal_entries_idempotency",
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "organization_id", "id", name="uq_journal_entries_scope"
-        ),
+        sa.UniqueConstraint("tenant_id", "organization_id", "id", name="uq_journal_entries_scope"),
         sa.ForeignKeyConstraint(
             ["tenant_id", "organization_id"],
             ["organizations.tenant_id", "organizations.id"],
