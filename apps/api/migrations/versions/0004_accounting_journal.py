@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("organization_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("idempotency_key", sa.String(128), nullable=False),
         sa.Column("description", sa.String(500), nullable=False),
-        sa.Column("posted_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
         sa.UniqueConstraint(
             "tenant_id", "organization_id", "idempotency_key",
             name="uq_journal_entries_idempotency",
@@ -68,24 +68,46 @@ def upgrade() -> None:
         ),
     )
     op.execute("""
-        CREATE FUNCTION reject_journal_mutation() RETURNS trigger AS $
+        CREATE FUNCTION guard_journal_entry_mutation() RETURNS trigger AS $body$
         BEGIN
-            RAISE EXCEPTION 'posted journals are immutable';
+            IF OLD.posted_at IS NOT NULL THEN
+                RAISE EXCEPTION 'posted journals are immutable';
+            END IF;
+            RETURN NEW;
         END;
-        $ LANGUAGE plpgsql
+        $body$ LANGUAGE plpgsql
     """)
-    for table in ("journal_entries", "journal_lines"):
-        op.execute(
-            f"CREATE TRIGGER {table}_immutable "
-            f"BEFORE UPDATE OR DELETE ON {table} "
-            "FOR EACH ROW EXECUTE FUNCTION reject_journal_mutation()"
-        )
+    op.execute("""
+        CREATE FUNCTION guard_journal_line_mutation() RETURNS trigger AS $body$
+        DECLARE parent_posted_at timestamptz;
+        BEGIN
+            SELECT posted_at INTO parent_posted_at
+            FROM journal_entries
+            WHERE id = COALESCE(NEW.entry_id, OLD.entry_id);
+            IF parent_posted_at IS NOT NULL THEN
+                RAISE EXCEPTION 'posted journal lines are immutable';
+            END IF;
+            RETURN COALESCE(NEW, OLD);
+        END;
+        $body$ LANGUAGE plpgsql
+    """)
+    op.execute(
+        "CREATE TRIGGER journal_entries_immutable "
+        "BEFORE UPDATE OR DELETE ON journal_entries "
+        "FOR EACH ROW EXECUTE FUNCTION guard_journal_entry_mutation()"
+    )
+    op.execute(
+        "CREATE TRIGGER journal_lines_immutable "
+        "BEFORE INSERT OR UPDATE OR DELETE ON journal_lines "
+        "FOR EACH ROW EXECUTE FUNCTION guard_journal_line_mutation()"
+    )
 
 
 def downgrade() -> None:
-    for table in ("journal_lines", "journal_entries"):
-        op.execute(f"DROP TRIGGER IF EXISTS {table}_immutable ON {table}")
-    op.execute("DROP FUNCTION IF EXISTS reject_journal_mutation()")
+    op.execute("DROP TRIGGER IF EXISTS journal_lines_immutable ON journal_lines")
+    op.execute("DROP TRIGGER IF EXISTS journal_entries_immutable ON journal_entries")
+    op.execute("DROP FUNCTION IF EXISTS guard_journal_line_mutation()")
+    op.execute("DROP FUNCTION IF EXISTS guard_journal_entry_mutation()")
     op.drop_table("journal_lines")
     op.drop_table("journal_entries")
     op.drop_constraint("uq_chart_accounts_scope", "chart_accounts", type_="unique")
