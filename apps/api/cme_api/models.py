@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
     Numeric,
@@ -149,3 +150,55 @@ class AuthSession(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class JournalEntry(Base):
+    __tablename__ = "journal_entries"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "organization_id", "idempotency_key"),
+        UniqueConstraint("tenant_id", "organization_id", "id", name="uq_journal_entries_scope"),
+        ForeignKeyConstraint(
+            ["tenant_id", "organization_id"],
+            ["organizations.tenant_id", "organizations.id"],
+            name="fk_journal_entries_organization",
+            ondelete="RESTRICT",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=False)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class JournalLine(Base):
+    __tablename__ = "journal_lines"
+    __table_args__ = (
+        CheckConstraint("debit >= 0 AND credit >= 0", name="ck_journal_lines_nonnegative"),
+        CheckConstraint(
+            "(debit = 0 AND credit > 0) OR (credit = 0 AND debit > 0)",
+            name="ck_journal_lines_one_sided",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "organization_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.organization_id", "journal_entries.id"],
+            name="fk_journal_lines_entry",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "organization_id", "account_id"],
+            ["chart_accounts.tenant_id", "chart_accounts.organization_id", "chart_accounts.id"],
+            name="fk_journal_lines_account",
+            ondelete="RESTRICT",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    entry_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    account_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    debit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal(0))
+    credit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal(0))
