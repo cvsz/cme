@@ -26,7 +26,8 @@ def readiness() -> dict[str, str]:
         with SessionLocal() as db:
             revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="database unavailable or schema not initialized") from exc
+        detail = "database unavailable or schema not initialized"
+        raise HTTPException(status_code=503, detail=detail) from exc
     if revision != EXPECTED_SCHEMA_REVISION:
         raise HTTPException(status_code=503, detail="database schema revision mismatch")
     return {"status": "ready", "environment": settings.app_env}
