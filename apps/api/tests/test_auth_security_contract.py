@@ -49,3 +49,23 @@ def test_auth_session_mutations_record_audit_before_commit():
     assert rotate.index("record_audit_event(") < rotate.index("db.commit()")
     assert 'action="auth.logout"' in logout
     assert logout.index("record_audit_event(") < logout.index("db.commit()")
+
+
+def test_login_lookup_is_bounded_and_duplicate_matches_fail_closed():
+    source = AUTH_API.read_text()
+    login = _function_source(source, "login", "me")
+    assert ".limit(2)" in login
+    assert "if len(matches) != 1:" in login
+
+
+def test_authentication_requires_active_user_and_tenant_scope():
+    source = SESSION_SERVICE.read_text()
+    authenticate = _function_source(source, "_authenticate", "authenticate")
+    assert "User.is_active.is_(True)" in authenticate
+    assert "AuthSession.tenant_id == tenant_id" in authenticate
+
+
+def test_rotation_preserves_absolute_session_expiry():
+    source = SESSION_SERVICE.read_text()
+    rotate = _function_source(source, "rotate")
+    assert "expires_at=previous.expires_at" in rotate
