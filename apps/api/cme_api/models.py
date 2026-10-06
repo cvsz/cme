@@ -6,11 +6,11 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
     Numeric,
     String,
-    CheckConstraint,
     UniqueConstraint,
     func,
 )
@@ -170,7 +170,7 @@ class JournalEntry(Base):
     organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=False)
-    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class JournalLine(Base):
