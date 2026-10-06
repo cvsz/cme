@@ -35,3 +35,17 @@ def test_revoke_and_rotate_lock_predecessor_independently():
     rotate = _function_source(source, "rotate")
     assert "for_update=True" in revoke
     assert "for_update=True" in rotate
+
+
+def test_auth_session_mutations_record_audit_before_commit():
+    source = AUTH_API.read_text()
+    login = _function_source(source, "login", "me")
+    rotate = _function_source(source, "rotate", "logout")
+    logout = _function_source(source, "logout")
+
+    assert 'action="auth.login"' in login
+    assert login.index("record_audit_event(") < login.index("db.commit()")
+    assert 'action="auth.session.rotate"' in rotate
+    assert rotate.index("record_audit_event(") < rotate.index("db.commit()")
+    assert 'action="auth.logout"' in logout
+    assert logout.index("record_audit_event(") < logout.index("db.commit()")
