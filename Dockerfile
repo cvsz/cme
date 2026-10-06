@@ -8,6 +8,8 @@ RUN addgroup --system cme && adduser --system --ingroup cme cme
 WORKDIR /app
 
 COPY apps/api/pyproject.toml ./pyproject.toml
+COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/migrations ./migrations
 COPY apps/api/cme_api ./cme_api
 RUN pip install --no-cache-dir .
 
