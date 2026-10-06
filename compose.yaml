@@ -2,11 +2,11 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: cme
-      POSTGRES_USER: cme
-      POSTGRES_PASSWORD: cme
+      POSTGRES_DB: ${POSTGRES_DB:-cme}
+      POSTGRES_USER: ${POSTGRES_USER:-cme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cme}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cme -d cme"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cme} -d ${POSTGRES_DB:-cme}"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -20,12 +20,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  migrate:
+    build: .
+    profiles: ["ops"]
+    command: ["alembic", "-c", "/app/alembic.ini", "upgrade", "head"]
+    environment:
+      CME_APP_ENV: ${CME_APP_ENV:-development}
+      CME_DATABASE_URL: ${CME_DATABASE_URL:-postgresql+psycopg://cme:cme@postgres:5432/cme}
+      CME_REDIS_URL: ${CME_REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres: {condition: service_healthy}
   api:
     build: .
     environment:
-      CME_APP_ENV: development
-      CME_DATABASE_URL: postgresql+psycopg://cme:cme@postgres:5432/cme
-      CME_REDIS_URL: redis://redis:6379/0
+      CME_APP_ENV: ${CME_APP_ENV:-development}
+      CME_DATABASE_URL: ${CME_DATABASE_URL:-postgresql+psycopg://cme:cme@postgres:5432/cme}
+      CME_REDIS_URL: ${CME_REDIS_URL:-redis://redis:6379/0}
     ports: ["127.0.0.1:8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}
