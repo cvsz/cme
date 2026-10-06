@@ -1,0 +1,36 @@
+name: Production Verification Kit
+
+on:
+  pull_request:
+    paths:
+      - "scripts/verify-deployment.sh"
+      - "scripts/verify-release.sh"
+      - "scripts/load_probe.py"
+      - "docs/production-verification.md"
+      - ".github/workflows/production-verification-kit.yml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  kit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Shell syntax
+        run: sh -n scripts/verify-deployment.sh scripts/verify-release.sh
+      - name: Python compile
+        run: python3 -m py_compile scripts/load_probe.py
+      - name: Exercise load probe pass and fail behavior
+        run: |
+          python3 -m http.server 8765 >/tmp/http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          sleep 1
+          python3 scripts/load_probe.py --url http://127.0.0.1:8765/ --requests 20 --concurrency 4 --max-p95-ms 5000 --max-error-rate 0
+          if python3 scripts/load_probe.py --url http://127.0.0.1:1/ --requests 5 --concurrency 2 --max-p95-ms 5000 --max-error-rate 0; then
+            echo "load probe failed to reject errors"
+            exit 1
+          fi
