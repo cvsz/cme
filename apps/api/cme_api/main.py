@@ -5,9 +5,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from cme_api.auth_api import router as auth_router
 from cme_api.config import get_settings
 from cme_api.db import SessionLocal
+from cme_api.observability import RequestObservabilityMiddleware
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
+app.add_middleware(RequestObservabilityMiddleware)
 app.include_router(auth_router, prefix=settings.api_prefix)
 
 
