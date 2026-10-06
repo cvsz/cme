@@ -14,7 +14,15 @@ def test_liveness_does_not_touch_database(monkeypatch):
     assert response.json() == {"status": "ok"}
 
 
-def test_readiness_checks_database(monkeypatch):
+class FakeResult:
+    def __init__(self, revision):
+        self.revision = revision
+
+    def scalar_one(self):
+        return self.revision
+
+
+def test_readiness_checks_schema_revision(monkeypatch):
     class FakeSession:
         def __enter__(self):
             return self
@@ -23,7 +31,8 @@ def test_readiness_checks_database(monkeypatch):
             return None
 
         def execute(self, statement):
-            assert str(statement) == "SELECT 1"
+            assert str(statement) == "SELECT version_num FROM alembic_version"
+            return FakeResult(main.EXPECTED_SCHEMA_REVISION)
 
     monkeypatch.setattr(main, "SessionLocal", FakeSession)
     response = TestClient(main.app).get("/ready")
@@ -42,4 +51,21 @@ def test_readiness_fails_closed_when_database_is_unavailable(monkeypatch):
     monkeypatch.setattr(main, "SessionLocal", BrokenSession)
     response = TestClient(main.app).get("/ready")
     assert response.status_code == 503
-    assert response.json() == {"detail": "database unavailable"}
+    assert response.json() == {"detail": "database unavailable or schema not initialized"}
+
+
+def test_readiness_fails_closed_when_schema_revision_is_stale(monkeypatch):
+    class StaleSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def execute(self, _statement):
+            return FakeResult("0003_auth_sessions")
+
+    monkeypatch.setattr(main, "SessionLocal", StaleSession)
+    response = TestClient(main.app).get("/ready")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "database schema revision mismatch"}
