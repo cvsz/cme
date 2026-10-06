@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from cme_api.audit import record_audit_event
 from cme_api.db import get_session
 from cme_api.models import AuthSession, User
 from cme_api.security import hash_password, verify_password
@@ -103,6 +104,13 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Db) -
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
     user = matches[0]
     _, issued = SessionService(db).create(tenant_id=user.tenant_id, user_id=user.id)
+    record_audit_event(
+        db,
+        tenant_id=user.tenant_id,
+        actor_user_id=user.id,
+        action="auth.login",
+        entity_type="auth_session",
+    )
     db.commit()
     _set_auth_cookies(response, token=issued.token, csrf_token=issued.csrf_token)
     return SessionIdentity(user_id=str(user.id), tenant_id=str(user.tenant_id), email=user.email)
@@ -136,7 +144,14 @@ def rotate(
     if not session_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
     try:
-        _, issued = SessionService(db).rotate(token=session_token)
+        record, issued = SessionService(db).rotate(token=session_token)
+        record_audit_event(
+            db,
+            tenant_id=record.tenant_id,
+            actor_user_id=record.user_id,
+            action="auth.session.rotate",
+            entity_type="auth_session",
+        )
     except InvalidSessionError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized"
@@ -156,7 +171,14 @@ def logout(
     _require_csrf(csrf_cookie, csrf_header)
     if session_token:
         try:
-            SessionService(db).revoke(token=session_token)
+            record = SessionService(db).revoke(token=session_token)
+            record_audit_event(
+                db,
+                tenant_id=record.tenant_id,
+                actor_user_id=record.user_id,
+                action="auth.logout",
+                entity_type="auth_session",
+            )
             db.commit()
         except InvalidSessionError:
             db.rollback()
