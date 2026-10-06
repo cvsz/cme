@@ -2,9 +2,11 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from cme_api import models  # noqa: F401
+from cme_api.config import get_settings
 from cme_api.db import Base
 
 config = context.config
+config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 

@@ -20,6 +20,22 @@ permissions:
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: cme
+          POSTGRES_PASSWORD: cme
+          POSTGRES_DB: cme_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cme -d cme_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CME_DATABASE_URL: postgresql+psycopg://cme:cme@localhost:5432/cme_test
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -35,6 +51,9 @@ jobs:
         run: ruff check apps/api
       - name: Format
         run: ruff format --check apps/api
+      - name: Migrate test database
+        working-directory: apps/api
+        run: alembic upgrade head
       - name: Test
         working-directory: apps/api
         run: pytest
