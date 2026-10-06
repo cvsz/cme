@@ -4,8 +4,8 @@ Revision ID: 0004_accounting_journal
 Revises: 0003_auth_sessions
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0004_accounting_journal"
