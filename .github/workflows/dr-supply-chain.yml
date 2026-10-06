@@ -8,6 +8,7 @@ on:
       - "scripts/restore-postgres.sh"
       - "Dockerfile"
       - ".github/workflows/dr-supply-chain.yml"
+      - "docs/disaster-recovery.md"
   push:
     branches: [main]
 
