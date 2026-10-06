@@ -1,0 +1,23 @@
+name: Release Evidence
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "compose.yaml"
+      - "scripts/verify-fresh-clone.sh"
+      - ".github/workflows/release-evidence.yml"
+      - "docs/release-evidence.md"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-clone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Verify fresh clone
+        run: sh scripts/verify-fresh-clone.sh
