@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from cme_api.db import engine
@@ -24,6 +25,14 @@ def _user(db: Session) -> tuple[Tenant, User]:
     return tenant, user
 
 
+def test_alembic_migrated_auth_session_table_exists():
+    with Session(engine) as db:
+        count = db.execute(
+            text("select count(*) from information_schema.tables where table_name = 'auth_sessions'")
+        ).scalar_one()
+        assert count == 1
+
+
 def test_session_rotation_preserves_absolute_expiry():
     with Session(engine) as db, db.begin():
         tenant, user = _user(db)
@@ -42,6 +51,7 @@ def test_session_rotation_preserves_absolute_expiry():
 
         assert replacement.expires_at == absolute_expiry
         assert replacement_issued.expires_at == absolute_expiry
+        assert replacement.token_digest != replacement_issued.token
         with pytest.raises(InvalidSessionError):
             service.authenticate(token=issued.token, tenant_id=tenant.id)
 
