@@ -34,6 +34,11 @@ jobs:
       CME_BACKUP_FILE: /tmp/cme.dump
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       - name: Seed restore sentinel
         run: psql "$CME_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE TABLE restore_sentinel(id integer primary key); INSERT INTO restore_sentinel VALUES (42);"
       - name: Backup
@@ -53,17 +58,16 @@ jobs:
         run: docker build -t cme-api:ci .
       - name: Verify non-root runtime
         run: test "$(docker run --rm --entrypoint=id cme-api:ci -u)" != "0"
+      - name: Install Syft and Trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.33.0
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
       - name: Generate SBOM
-        uses: anchore/sbom-action@cee1b8e05ae7a0c6f8ec3bc5d55c4a92c95d3d42 # v0.20.6
-        with:
-          image: cme-api:ci
-          artifact-name: cme-api.spdx.json
-          output-file: /tmp/cme-api.spdx.json
+        run: syft cme-api:ci -o spdx-json=/tmp/cme-api.spdx.json
       - name: Scan image
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-        with:
-          image-ref: cme-api:ci
-          format: table
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+        run: trivy image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 cme-api:ci
