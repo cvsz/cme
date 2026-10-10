@@ -6,6 +6,9 @@ on:
       - "scripts/verify-deployment.sh"
       - "scripts/verify-release.sh"
       - "scripts/load_probe.py"
+      - "scripts/production/**"
+      - "scripts/backup-postgres.sh"
+      - "scripts/restore-postgres.sh"
       - "docs/production-verification.md"
       - ".github/workflows/production-verification-kit.yml"
   push:
@@ -20,9 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Shell syntax
-        run: sh -n scripts/verify-deployment.sh scripts/verify-release.sh
+        run: sh -n scripts/verify-deployment.sh scripts/verify-release.sh scripts/backup-postgres.sh scripts/restore-postgres.sh scripts/production/*.sh
       - name: Python compile
-        run: python3 -m py_compile scripts/load_probe.py
+        run: python3 -m py_compile scripts/load_probe.py scripts/production/*.py
       - name: Exercise load probe pass and fail behavior
         run: |
           python3 -m http.server 8765 >/tmp/http.log 2>&1 &

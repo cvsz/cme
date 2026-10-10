@@ -11,7 +11,7 @@ class Base(DeclarativeBase):
 
 
 def _url() -> str:
-    return get_settings().database_url
+    return get_settings().database_url.get_secret_value()
 
 
 engine = create_engine(_url(), pool_pre_ping=True)

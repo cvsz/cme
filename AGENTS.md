@@ -40,6 +40,12 @@ Use obvious placeholders such as `PROJECT_NAME`, `OWNER`, `example.com`, and `RE
 6. Update documentation when behavior, setup, governance, or release procedures change.
 7. Open a pull request; do not claim merge/release readiness without exact-head evidence.
 
+## Autonomous task execution
+- When a user requests implementation, make the necessary reversible edits in the authorized workspace, run relevant local checks, and prepare a reviewable pull request without asking for approval at each step.
+- Do not treat a request for full access as a change to platform sandbox permissions. Use the supported escalation path for permitted commands that the sandbox blocks; never bypass the permission boundary.
+- Require explicit operator approval before live credential changes, destructive database actions, production cutover or rollback, or changes to external or shared infrastructure.
+- Do not request approval again for routine source, documentation, test, or local build changes that the user has already authorized.
+
 ## Verification
 At minimum, verify Markdown/YAML syntax for touched files, workflow permissions/triggers, links and placeholders, absence of committed secrets, and consistency between README, templates, governance, security, and release documentation.
 

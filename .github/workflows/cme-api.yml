@@ -60,4 +60,4 @@ jobs:
       - name: Compile
         run: python -m compileall -q apps/api/cme_api
       - name: Build container
-        run: docker build -t cme-api:ci .
+        run: docker build --build-arg CME_RELEASE_SHA="$GITHUB_SHA" -t cme-api:ci .

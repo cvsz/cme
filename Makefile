@@ -33,7 +33,13 @@ build:
 	$(PYTHON) -m compileall -q $(API_DIR)/cme_api
 
 security:
-	@! grep -RInE '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' apps .env.example
+	@echo "Scanning tracked source files for potential secrets..."
+	@if git grep -n -I -E -e 'AKIA[0-9A-Z]{16}' -e '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' -- apps .env.example; then \
+		echo "ERROR: Potential secret detected"; \
+		exit 1; \
+	else \
+		echo "Tracked-source secret scan passed"; \
+	fi
 
 ci: validate-template lint test build security
 

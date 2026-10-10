@@ -21,21 +21,33 @@ services:
       timeout: 3s
       retries: 20
   migrate:
-    build: .
+    image: ${CME_API_IMAGE:-cme-api:local}
+    build:
+      context: .
+      args:
+        CME_RELEASE_SHA: ${CME_RELEASE_SHA:-REPLACE_ME}
     profiles: ["ops"]
     command: ["alembic", "-c", "/app/alembic.ini", "upgrade", "head"]
     environment:
       CME_APP_ENV: ${CME_APP_ENV:-development}
-      CME_DATABASE_URL: ${CME_DATABASE_URL:-postgresql+psycopg://cme:cme@postgres:5432/cme}
+      CME_DATABASE_URL: ${CME_MIGRATION_DATABASE_URL:-${CME_DATABASE_URL:-postgresql+psycopg://cme:cme@postgres:5432/cme}}
       CME_REDIS_URL: ${CME_REDIS_URL:-redis://redis:6379/0}
     depends_on:
       postgres: {condition: service_healthy}
   api:
-    build: .
+    image: ${CME_API_IMAGE:-cme-api:local}
+    build:
+      context: .
+      args:
+        CME_RELEASE_SHA: ${CME_RELEASE_SHA:-REPLACE_ME}
     environment:
       CME_APP_ENV: ${CME_APP_ENV:-development}
       CME_DATABASE_URL: ${CME_DATABASE_URL:-postgresql+psycopg://cme:cme@postgres:5432/cme}
       CME_REDIS_URL: ${CME_REDIS_URL:-redis://redis:6379/0}
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     ports: ["127.0.0.1:8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}

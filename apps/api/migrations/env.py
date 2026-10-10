@@ -6,7 +6,9 @@ from cme_api.config import get_settings
 from cme_api.db import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
+config.set_main_option(
+    "sqlalchemy.url", get_settings().database_url.get_secret_value().replace("%", "%%")
+)
 target_metadata = Base.metadata
 
 
