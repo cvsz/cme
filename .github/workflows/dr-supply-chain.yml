@@ -95,7 +95,9 @@ jobs:
             echo "| Backup path | $CME_BACKUP_FILE (ephemeral CI runner) |"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Create separate disposable restore database
-        run: createdb --host=localhost --username=cme cme_restore
+        env:
+          PGPASSWORD: cme
+        run: createdb --no-password --host=localhost --username=cme cme_restore
       - name: Restore target database and record timing
         shell: bash
         env:
