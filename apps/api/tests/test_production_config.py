@@ -86,7 +86,10 @@ def test_invalid_environment_values_are_rejected(environment):
         Settings(_env_file=None, app_env=environment)
 
 
-def test_development_retains_safe_local_defaults():
+def test_development_retains_safe_local_defaults(monkeypatch):
+    # CI supplies CME_DATABASE_URL for its PostgreSQL service; isolate the defaults test.
+    monkeypatch.delenv("CME_DATABASE_URL", raising=False)
+    monkeypatch.delenv("CME_REDIS_URL", raising=False)
     settings = Settings(_env_file=None, app_env="development")
     assert settings.app_env == "development"
     assert settings.database_url.get_secret_value().endswith("@localhost:5432/cme")
