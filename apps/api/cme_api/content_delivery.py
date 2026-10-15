@@ -6,7 +6,7 @@ outbox delivery and reconciliation must be implemented by subsequent vertical sl
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -80,8 +80,8 @@ def require_utc_schedule(when: datetime) -> datetime:
     """Reject naive/past or non-UTC schedule times; store authoritative UTC time."""
     if when.tzinfo is None or when.utcoffset() is None:
         raise ValueError("scheduled time must be timezone-aware")
-    now = datetime.now(timezone.utc)
-    normalized = when.astimezone(timezone.utc)
+    now = datetime.now(UTC)
+    normalized = when.astimezone(UTC)
     if normalized <= now:
         raise ValueError("scheduled time must be in the future")
     return normalized
