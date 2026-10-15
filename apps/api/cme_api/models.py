@@ -209,8 +209,15 @@ class ContentPublication(Base):
 
     __tablename__ = "content_publications"
     __table_args__ = (
-        UniqueConstraint("tenant_id", "organization_id", "id", name="uq_content_publications_scope"),
-        UniqueConstraint("tenant_id", "organization_id", "idempotency_key", name="uq_content_publications_idempotency"),
+        UniqueConstraint(
+            "tenant_id", "organization_id", "id", name="uq_content_publications_scope"
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "organization_id",
+            "idempotency_key",
+            name="uq_content_publications_idempotency",
+        ),
         ForeignKeyConstraint(
             ["tenant_id", "organization_id"],
             ["organizations.tenant_id", "organizations.id"],
@@ -232,10 +239,16 @@ class PublicationOutboxEvent(Base):
 
     __tablename__ = "publication_outbox_events"
     __table_args__ = (
-        UniqueConstraint("tenant_id", "organization_id", "event_key", name="uq_publication_outbox_event_key"),
+        UniqueConstraint(
+            "tenant_id", "organization_id", "event_key", name="uq_publication_outbox_event_key"
+        ),
         ForeignKeyConstraint(
             ["tenant_id", "organization_id", "publication_id"],
-            ["content_publications.tenant_id", "content_publications.organization_id", "content_publications.id"],
+            [
+                "content_publications.tenant_id",
+                "content_publications.organization_id",
+                "content_publications.id",
+            ],
             name="fk_publication_outbox_publication_scope",
             ondelete="RESTRICT",
         ),
