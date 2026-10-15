@@ -22,7 +22,7 @@ def upgrade() -> None:
         sa.Column("organization_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("idempotency_key", sa.String(128), nullable=False),
         sa.Column("state", sa.String(32), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.UniqueConstraint(
             "tenant_id", "organization_id", "id",
             name="uq_content_publications_scope",
@@ -53,7 +53,7 @@ def upgrade() -> None:
         sa.Column("event_key", sa.String(128), nullable=False),
         sa.Column("event_type", sa.String(64), nullable=False),
         sa.Column("processed_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.UniqueConstraint(
             "tenant_id", "organization_id", "event_key",
             name="uq_publication_outbox_event_key",
