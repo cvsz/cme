@@ -3,6 +3,7 @@
 This module is not a publishing worker. Persistence, authorization, provider consent,
 outbox delivery and reconciliation must be implemented by subsequent vertical slices.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,15 +28,37 @@ class PublicationState(StrEnum):
 
 
 _ALLOWED: dict[PublicationState, frozenset[PublicationState]] = {
-    PublicationState.DRAFT: frozenset({PublicationState.NEEDS_APPROVAL, PublicationState.CANCELLED}),
-    PublicationState.NEEDS_APPROVAL: frozenset({PublicationState.APPROVED, PublicationState.DRAFT, PublicationState.CANCELLED}),
-    PublicationState.APPROVED: frozenset({PublicationState.SCHEDULED, PublicationState.QUEUED, PublicationState.CANCELLED}),
+    PublicationState.DRAFT: frozenset(
+        {PublicationState.NEEDS_APPROVAL, PublicationState.CANCELLED}
+    ),
+    PublicationState.NEEDS_APPROVAL: frozenset(
+        {PublicationState.APPROVED, PublicationState.DRAFT, PublicationState.CANCELLED}
+    ),
+    PublicationState.APPROVED: frozenset(
+        {PublicationState.SCHEDULED, PublicationState.QUEUED, PublicationState.CANCELLED}
+    ),
     PublicationState.SCHEDULED: frozenset({PublicationState.QUEUED, PublicationState.CANCELLED}),
     PublicationState.QUEUED: frozenset({PublicationState.PROCESSING, PublicationState.CANCELLED}),
-    PublicationState.PROCESSING: frozenset({PublicationState.PUBLISHING, PublicationState.FAILED_RETRYABLE, PublicationState.FAILED_TERMINAL}),
-    PublicationState.PUBLISHING: frozenset({PublicationState.PUBLISHED, PublicationState.RECONCILING, PublicationState.FAILED_TERMINAL}),
-    PublicationState.RECONCILING: frozenset({PublicationState.PUBLISHED, PublicationState.FAILED_RETRYABLE, PublicationState.FAILED_TERMINAL}),
-    PublicationState.FAILED_RETRYABLE: frozenset({PublicationState.QUEUED, PublicationState.RECONCILING, PublicationState.FAILED_TERMINAL}),
+    PublicationState.PROCESSING: frozenset(
+        {
+            PublicationState.PUBLISHING,
+            PublicationState.FAILED_RETRYABLE,
+            PublicationState.FAILED_TERMINAL,
+        }
+    ),
+    PublicationState.PUBLISHING: frozenset(
+        {PublicationState.PUBLISHED, PublicationState.RECONCILING, PublicationState.FAILED_TERMINAL}
+    ),
+    PublicationState.RECONCILING: frozenset(
+        {
+            PublicationState.PUBLISHED,
+            PublicationState.FAILED_RETRYABLE,
+            PublicationState.FAILED_TERMINAL,
+        }
+    ),
+    PublicationState.FAILED_RETRYABLE: frozenset(
+        {PublicationState.QUEUED, PublicationState.RECONCILING, PublicationState.FAILED_TERMINAL}
+    ),
     PublicationState.PUBLISHED: frozenset(),
     PublicationState.FAILED_TERMINAL: frozenset(),
     PublicationState.CANCELLED: frozenset(),
@@ -62,7 +85,10 @@ def transition(
     actor_organization_id: UUID,
 ) -> PublicationContext:
     """Validate scope and lifecycle. Callers must separately enforce actor RBAC."""
-    if actor_tenant_id != publication.tenant_id or actor_organization_id != publication.organization_id:
+    if (
+        actor_tenant_id != publication.tenant_id
+        or actor_organization_id != publication.organization_id
+    ):
         raise PermissionError("publication scope mismatch")
     if next_state not in _ALLOWED[publication.state]:
         raise InvalidPublicationTransition(
