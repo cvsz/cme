@@ -8,9 +8,7 @@ from cme_api.models import ContentPublication, PublicationOutboxEvent
 
 def test_models_registered_with_metadata():
     assert ContentPublication.__table__ is Base.metadata.tables["content_publications"]
-    assert PublicationOutboxEvent.__table__ is Base.metadata.tables[
-        "publication_outbox_events"
-    ]
+    assert PublicationOutboxEvent.__table__ is Base.metadata.tables["publication_outbox_events"]
 
 
 def test_publication_scoped_idempotency_and_ownership():
@@ -26,9 +24,7 @@ def test_publication_scoped_idempotency_and_ownership():
         constraint for constraint in table.constraints
         if isinstance(constraint, ForeignKeyConstraint)
     ]
-    assert any(
-        constraint.name == "fk_content_publications_organization" for constraint in fks
-    )
+    assert any(constraint.name == "fk_content_publications_organization" for constraint in fks)
 
 
 def test_outbox_foreign_key_rejects_cross_scope_reference():
