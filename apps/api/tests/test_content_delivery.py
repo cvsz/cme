@@ -63,9 +63,7 @@ def test_original_state_not_mutated():
 )
 def test_terminal_states_cannot_transition(terminal):
     item = publication()
-    item = PublicationContext(
-        item.tenant_id, item.organization_id, item.publication_id, terminal
-    )
+    item = PublicationContext(item.tenant_id, item.organization_id, item.publication_id, terminal)
     with pytest.raises(InvalidPublicationTransition):
         move(item, PublicationState.QUEUED)
 
