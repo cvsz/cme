@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ARG CME_RELEASE_SHA=REPLACE_ME
 LABEL org.opencontainers.image.revision="${CME_RELEASE_SHA}"
