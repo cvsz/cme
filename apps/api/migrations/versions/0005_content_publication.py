@@ -59,9 +59,13 @@ def upgrade() -> None:
         sa.Column("event_key", sa.String(128), nullable=False),
         sa.Column("event_type", sa.String(64), nullable=False),
         sa.Column("processed_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.UniqueConstraint(
-            "tenant_id", "organization_id", "event_key",
+            "tenant_id",
+            "organization_id",
+            "event_key",
             name="uq_publication_outbox_event_key",
         ),
         sa.ForeignKeyConstraint(
