@@ -98,17 +98,21 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index(
-        "ix_publication_outbox_events_publication_id", table_name="publication_outbox_events"
+        "ix_publication_outbox_events_publication_id",
+        table_name="publication_outbox_events",
     )
     op.drop_index(
-        "ix_publication_outbox_events_organization_id", table_name="publication_outbox_events"
+        "ix_publication_outbox_events_organization_id",
+        table_name="publication_outbox_events",
     )
     op.drop_index(
-        "ix_publication_outbox_events_tenant_id", table_name="publication_outbox_events"
+        "ix_publication_outbox_events_tenant_id",
+        table_name="publication_outbox_events",
     )
     op.drop_table("publication_outbox_events")
     op.drop_index(
-        "ix_content_publications_organization_id", table_name="content_publications"
+        "ix_content_publications_organization_id",
+        table_name="content_publications",
     )
     op.drop_index("ix_content_publications_tenant_id", table_name="content_publications")
     op.drop_table("content_publications")
