@@ -21,7 +21,8 @@ def test_publication_scoped_idempotency_and_ownership():
     assert ("tenant_id", "organization_id", "idempotency_key") in uniques
     assert ("tenant_id", "organization_id", "id") in uniques
     fks = [
-        constraint for constraint in table.constraints
+        constraint
+        for constraint in table.constraints
         if isinstance(constraint, ForeignKeyConstraint)
     ]
     assert any(constraint.name == "fk_content_publications_organization" for constraint in fks)
@@ -30,7 +31,8 @@ def test_publication_scoped_idempotency_and_ownership():
 def test_outbox_foreign_key_rejects_cross_scope_reference():
     table = PublicationOutboxEvent.__table__
     foreign_keys = [
-        constraint for constraint in table.constraints
+        constraint
+        for constraint in table.constraints
         if isinstance(constraint, ForeignKeyConstraint)
     ]
     scoped = next(
@@ -39,13 +41,18 @@ def test_outbox_foreign_key_rejects_cross_scope_reference():
         if constraint.name == "fk_publication_outbox_publication_scope"
     )
     assert {column.name for column in scoped.columns} == {
-        "tenant_id", "organization_id", "publication_id"
+        "tenant_id",
+        "organization_id",
+        "publication_id",
     }
     unique = next(
-        constraint for constraint in table.constraints
+        constraint
+        for constraint in table.constraints
         if isinstance(constraint, UniqueConstraint)
         and constraint.name == "uq_publication_outbox_event_key"
     )
     assert {column.name for column in unique.columns} == {
-        "tenant_id", "organization_id", "event_key"
+        "tenant_id",
+        "organization_id",
+        "event_key",
     }
