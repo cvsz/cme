@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import secrets
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from threading import Lock
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,15 +22,16 @@ SESSION_COOKIE = "__Host-cme_session"
 CSRF_COOKIE = "__Host-cme_csrf"
 _LOGIN_WINDOW_SECONDS = 60.0
 _LOGIN_MAX_ATTEMPTS = 10
+_LOGIN_MAX_BUCKETS = 10_000
 _DUMMY_HASH = hash_password("cme-dummy-password-not-a-user")
-_login_attempts: dict[str, deque[float]] = defaultdict(deque)
+_login_attempts: OrderedDict[str, deque[float]] = OrderedDict()
 _login_attempts_lock = Lock()
 router = APIRouter(prefix="/auth", tags=["authentication"])
 Db = Annotated[Session, Depends(get_session)]
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: str = Field(max_length=254)
     password: str
 
 
@@ -64,10 +66,26 @@ def _require_csrf(csrf_cookie: str | None, csrf_header: str | None) -> None:
 
 def _rate_limit_login(request: Request, email: str) -> None:
     host = request.client.host if request.client else "unknown"
-    key = f"{host}:{email.casefold()}"
+    key_material = f"{host}\0{email.casefold()}".encode()
+    key = hashlib.sha256(key_material).hexdigest()
     now = time.monotonic()
     with _login_attempts_lock:
-        attempts = _login_attempts[key]
+        while _login_attempts:
+            oldest_key = next(iter(_login_attempts))
+            oldest_attempts = _login_attempts[oldest_key]
+            if oldest_attempts and now - oldest_attempts[-1] < _LOGIN_WINDOW_SECONDS:
+                break
+            _login_attempts.popitem(last=False)
+
+        attempts = _login_attempts.get(key)
+        if attempts is None:
+            if len(_login_attempts) >= _LOGIN_MAX_BUCKETS:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="too many attempts"
+                )
+            attempts = deque()
+            _login_attempts[key] = attempts
+
         while attempts and now - attempts[0] >= _LOGIN_WINDOW_SECONDS:
             attempts.popleft()
         if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
@@ -75,6 +93,7 @@ def _rate_limit_login(request: Request, email: str) -> None:
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="too many attempts"
             )
         attempts.append(now)
+        _login_attempts.move_to_end(key)
 
 
 def _session(db: Session, token: str | None) -> AuthSession:

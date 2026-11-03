@@ -10,7 +10,7 @@ Prepare protected runtime and candidate release environment files outside the ch
 - a strong, non-default PostgreSQL runtime URL and Redis URL
 - a distinct migration database URL
 - a strong `POSTGRES_PASSWORD` for the PostgreSQL service configuration
-- a full 40-character `CME_RELEASE_SHA`
+- `CME_RELEASE_SHA` equal to `git rev-parse HEAD`, with the API image source paths unchanged
 - a unique `CME_API_IMAGE` for the candidate image
 - a verified backup path and adjacent `.sha256` sidecar
 - owner-approved `CME_RPO_TARGET` and `CME_RTO_TARGET`
@@ -39,7 +39,15 @@ Build the candidate under a unique release tag after setting its full SHA and im
 docker compose --env-file /etc/cme/runtime.env --env-file /etc/cme/release-candidate.env build api migrate
 ```
 
-The Docker image records `CME_RELEASE_SHA` in the OCI revision label. Keep the resulting image ID and image tag in the release record. Do not reuse mutable `latest` or `local` tags for a release.
+The preflight requires `CME_RELEASE_SHA` to match the current `HEAD`, the Compose build context to resolve to this checkout, and rejects tracked or untracked changes to the Compose/Docker build inputs, API package, migrations, release scripts, and backup/restore scripts. Unrelated local files such as protected backup artifacts do not change that source identity. The Docker image records the SHA in its OCI revision label. Keep the resulting image ID and image tag in the release record. Do not reuse mutable `latest` or `local` tags for a release.
+
+Before cutover, capture the candidate image identity and confirm its revision label. Keep `CME_EXPECTED_IMAGE_ID` from this step through post-cutover verification; do not derive the expected ID from the running container after deployment.
+
+```bash
+export CME_EXPECTED_RELEASE_SHA="$CME_RELEASE_SHA"
+test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$CME_API_IMAGE")" = "$CME_EXPECTED_RELEASE_SHA"
+export CME_EXPECTED_IMAGE_ID="$(docker image inspect --format '{{.Id}}' "$CME_API_IMAGE")"
+```
 
 ## Cutover and verification
 
@@ -51,11 +59,10 @@ docker compose --env-file /etc/cme/runtime.env --env-file /etc/cme/release.env u
 
 Do not run migrations as part of an unreviewed cutover. Use a separately reviewed migration window and the migration database role. Never run `docker compose down -v`.
 
-After deployment, obtain the exact running image ID and write a unique release manifest outside the repository:
+After deployment, verify the running container against the candidate image ID captured before cutover and write a unique release manifest outside the repository:
 
 ```bash
 export CME_EXPECTED_RELEASE_SHA="$CME_RELEASE_SHA"
-export CME_EXPECTED_IMAGE_ID="$(docker inspect --format '{{.Image}}' "$(docker compose --env-file /etc/cme/runtime.env --env-file /etc/cme/release.env ps -q api)")"
 export CME_RELEASE_EVIDENCE_FILE="/var/lib/cme/evidence/release-${CME_RELEASE_SHA}-$(date -u +%Y%m%dT%H%M%SZ).json"
 export CME_BASE_URL='http://127.0.0.1:8000'
 sh scripts/production/verify.sh

@@ -1,11 +1,68 @@
 import os
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts.production import preflight
 
 
 class ProductionPreflightTests(unittest.TestCase):
+    def test_release_source_identity_requires_exact_clean_git_head(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repo = Path(temporary_directory)
+
+            def git(*arguments: str) -> str:
+                result = subprocess.run(
+                    ["git", "-C", str(repo), *arguments],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                return result.stdout.strip()
+
+            git("init", "-q")
+            git("config", "user.email", "cme-test@example.invalid")
+            git("config", "user.name", "CMe test")
+            (repo / "source.txt").write_text("committed source\n", encoding="utf-8")
+            git("add", "source.txt")
+            git("commit", "-qm", "test source")
+            commit = git("rev-parse", "HEAD")
+
+            with patch.object(preflight, "REPOSITORY_ROOT", repo):
+                paths = ("source.txt",)
+                self.assertTrue(preflight.build_context_matches_checkout("."))
+                self.assertFalse(preflight.build_context_matches_checkout("/tmp"))
+                self.assertTrue(
+                    preflight.release_source_matches_checkout(commit, source_paths=paths)
+                )
+                self.assertFalse(
+                    preflight.release_source_matches_checkout("0" * 40, source_paths=paths)
+                )
+                self.assertFalse(
+                    preflight.release_source_matches_checkout("b" * 40, source_paths=paths)
+                )
+
+                (repo / "docs").mkdir()
+                (repo / "docs/local.md").write_text("unrelated local note\n", encoding="utf-8")
+                self.assertTrue(
+                    preflight.release_source_matches_checkout(commit, source_paths=paths)
+                )
+
+                (repo / "source.txt").write_text("modified source\n", encoding="utf-8")
+                self.assertFalse(
+                    preflight.release_source_matches_checkout(commit, source_paths=paths)
+                )
+
+                git("checkout", "--", "source.txt")
+                (repo / "untracked.py").write_text("uncommitted source\n", encoding="utf-8")
+                self.assertFalse(
+                    preflight.release_source_matches_checkout(
+                        commit, source_paths=("untracked.py",)
+                    )
+                )
+
     def test_recovery_policy_targets_reject_documentation_placeholders(self):
         self.assertTrue(preflight.policy_target_configured("ISOLATED_TEST_ONLY"))
         for placeholder in (

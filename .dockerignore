@@ -1,0 +1,14 @@
+# The image build only needs the API package, its migrations, and metadata.
+**
+!apps
+!apps/api
+!apps/api/pyproject.toml
+!apps/api/alembic.ini
+!apps/api/migrations
+!apps/api/migrations/**
+!apps/api/cme_api
+!apps/api/cme_api/**
+
+# Exclude generated Python files even from the allowlisted package tree.
+**/__pycache__
+**/*.py[cod]

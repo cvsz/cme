@@ -15,6 +15,19 @@ from urllib.parse import unquote, urlsplit
 checks: list[str] = []
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9a-fA-F]{2})")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+RELEASE_SOURCE_PATHS = (
+    ".dockerignore",
+    "Dockerfile",
+    "compose.yaml",
+    "apps/api/pyproject.toml",
+    "apps/api/alembic.ini",
+    "apps/api/migrations",
+    "apps/api/cme_api",
+    "scripts/production",
+    "scripts/backup-postgres.sh",
+    "scripts/restore-postgres.sh",
+)
 MIGRATION_PROBE_CODE = '''
 from sqlalchemy import text
 from cme_api.db import SessionLocal
@@ -87,6 +100,47 @@ def report(state: str, name: str, detail: str) -> None:
 
 def run(command: list[str], *, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, capture_output=True, text=True, check=False, timeout=timeout)
+
+
+def release_source_matches_checkout(
+    release_sha: object,
+    *,
+    source_paths: tuple[str, ...] = RELEASE_SOURCE_PATHS,
+) -> bool:
+    """Require the image revision to match HEAD and clean image-source paths."""
+    if (
+        not isinstance(release_sha, str)
+        or not SHA_PATTERN.fullmatch(release_sha)
+        or release_sha.casefold() == "0" * 40
+    ):
+        return False
+
+    head = run(["git", "-C", str(REPOSITORY_ROOT), "rev-parse", "--verify", "HEAD^{commit}"])
+    if head.returncode != 0 or head.stdout.strip().casefold() != release_sha.casefold():
+        return False
+
+    status = run(
+        [
+            "git",
+            "-C",
+            str(REPOSITORY_ROOT),
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+            "--",
+            *source_paths,
+        ]
+    )
+    return status.returncode == 0 and not status.stdout.strip()
+
+
+def build_context_matches_checkout(context: object) -> bool:
+    if not isinstance(context, str) or not context:
+        return False
+    build_context = Path(context)
+    if not build_context.is_absolute():
+        build_context = REPOSITORY_ROOT / build_context
+    return build_context.resolve() == REPOSITORY_ROOT
 
 
 def compose_command(*arguments: str) -> list[str]:
@@ -269,17 +323,20 @@ def main() -> int:
         )
 
     release_sha = str(api.get("build", {}).get("args", {}).get("CME_RELEASE_SHA", ""))
-    if SHA_PATTERN.fullmatch(release_sha):
+    build_context = api.get("build", {}).get("context")
+    if release_source_matches_checkout(release_sha) and build_context_matches_checkout(
+        build_context
+    ):
         report(
             "PASS",
             "Release source identity",
-            "API image build is pinned to a full Git commit SHA",
+            "API image SHA matches HEAD and its source paths match the checkout",
         )
     else:
         report(
             "FAIL",
             "Release source identity",
-            "set CME_RELEASE_SHA to the full 40-character commit SHA",
+            "CME_RELEASE_SHA must match HEAD, the build context must be this checkout, and image source paths must be clean",
         )
 
     image_ref = str(api.get("image", ""))
