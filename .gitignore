@@ -16,6 +16,10 @@ __pycache__/
 dist/
 build/
 coverage/
+apps/api/cme_api.egg-info/
+
+# Local runtime data
+backups/
 .next/
 .nuxt/
 .out/
