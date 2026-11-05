@@ -1,5 +1,7 @@
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -14,6 +16,14 @@ class AccountingError(ValueError):
 
 
 _CENT = Decimal("0.01")
+
+
+def _journal_request_signature(
+    description: str, lines: Iterable[tuple[UUID, Decimal, Decimal]]
+) -> tuple[str, tuple[tuple[str, Decimal, Decimal], ...]]:
+    return description, tuple(
+        sorted((str(account_id), debit, credit) for account_id, debit, credit in lines)
+    )
 
 
 def _money(value: Decimal) -> Decimal:
@@ -91,6 +101,23 @@ def post_journal(
         )
         if existing is None:
             raise AccountingError("idempotent journal lookup failed")
+        existing_lines = db.scalars(
+            select(JournalLine).where(
+                JournalLine.tenant_id == principal.tenant_id,
+                JournalLine.organization_id == principal.organization_id,
+                JournalLine.entry_id == existing.id,
+            )
+        ).all()
+        requested_signature = _journal_request_signature(
+            description,
+            ((account.id, debit, credit) for account, debit, credit in normalized),
+        )
+        existing_signature = _journal_request_signature(
+            existing.description,
+            ((line.account_id, line.debit, line.credit) for line in existing_lines),
+        )
+        if existing_signature != requested_signature:
+            raise AccountingError("idempotency key reused with a different journal request")
         return existing
 
     entry = db.get(JournalEntry, entry_id)

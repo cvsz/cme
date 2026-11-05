@@ -2,7 +2,11 @@
 
 ## Signals and service health
 
-The API binds to loopback in the Compose deployment. `/health` is a liveness check and does not require database or Redis access. `/ready` verifies the Alembic revision, PostgreSQL connectivity, and Redis PING. A successful liveness response alone does not mean the application is ready.
+The API binds to loopback in the Compose deployment. `/health` is a liveness check and does not require database or Redis access. `/ready` verifies the Alembic revision, PostgreSQL connectivity, and Redis PING. The Docker image health check calls `/ready`, so Docker reports the API healthy only when its required dependencies are ready.
+
+## Local drill recheck — 2026-11-03
+
+The local `cme-p0-drill-api-1` container is not production verification. Its existing image is tagged and labeled with forty zeroes, which is not a Git commit, and was created on 2026-10-08. The container reports Docker `healthy` because that older image checks `/health`, but its `/ready` endpoint returns HTTP 503. At the time of the 2026-11-03 drill inspection, `zPostgreSQL:5432` was reachable while the configured `postgres` and `redis` hostnames did not resolve. A later local-only setup created authenticated `zRedis` and attached it to the current repository networks, including `cme-p0-drill_default`; the drill container's Redis URL and environment were not changed, so its Redis readiness remains unverified. The shared PostgreSQL catalog currently has no CMe-specific `cme` database or `cme` role. The source preflight now rejects a non-HEAD or dirty image source and the Dockerfile health check now uses `/ready`; the existing container has not been recreated. Do not create shared database roles/databases or change the drill deployment without the database/infrastructure operator's authorization.
 
 Use the existing ZEAZ monitoring stack where supported. This audit did not verify an alert receiver, production dashboard, disk-capacity alert, backup-failure alert, or alert delivery path. Coordinate shared monitoring and ingress changes through the infrastructure owner (`zworkforce`); do not add a second monitoring stack without an approved design.
 
@@ -45,6 +49,6 @@ sh scripts/production/preflight.sh
 
 - Public DNS, Cloudflare, tunnels, and shared ingress are outside CMe ownership.
 - Production alert routing, disk monitoring, backup alerting, and delivery evidence were not verified in this audit.
-- The current deployment uses a superuser database identity and an image without an OCI revision label; production role rotation and exact-image rollback remain blocked.
+- The 2026-10-08 deployment audit observed a superuser database identity and an image without an OCI revision label. The 2026-11-03 local drill did not connect to a CMe database, so current production database privileges and deployed-image provenance remain unverified; production role rotation and exact-image rollback remain blocked.
 - Production RPO/RTO targets must come from the release owner. CI durations and test-only sentinel values are not approved recovery objectives.
 - Local restore and rollback drills verify procedure behavior only; they do not prove current production backup freshness, off-host retention, or disaster recovery acceptance.

@@ -1,12 +1,19 @@
 import json
 import subprocess
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts.production import verify
 
 
 class ProductionVerifyTests(unittest.TestCase):
+    def test_docker_healthcheck_uses_dependency_readiness(self):
+        dockerfile = Path(__file__).parents[1] / "Dockerfile"
+        source = dockerfile.read_text(encoding="utf-8")
+
+        self.assertIn("http://127.0.0.1:8000/ready", source)
+
     def test_recovery_policy_targets_reject_documentation_placeholders(self):
         self.assertTrue(verify.policy_target_configured("ISOLATED_TEST_ONLY"))
         for placeholder in (
