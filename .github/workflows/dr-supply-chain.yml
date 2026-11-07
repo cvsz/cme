@@ -48,6 +48,8 @@ jobs:
       CME_BACKUP_FILE: /tmp/cme.dump
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+      - name: Initialize sanitized DR evidence directory
+        run: mkdir -p "$RUNNER_TEMP/cme-dr-evidence"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5
         with:
           python-version: "3.12"
@@ -94,6 +96,33 @@ jobs:
             echo "| PostgreSQL server version | $postgres_version |"
             echo "| Backup path | $CME_BACKUP_FILE (ephemeral CI runner) |"
           } >> "$GITHUB_STEP_SUMMARY"
+          export CME_EVIDENCE_BACKUP_STARTED="$backup_started"
+          export CME_EVIDENCE_BACKUP_COMPLETED="$backup_completed"
+          export CME_EVIDENCE_BACKUP_DURATION="$backup_duration"
+          export CME_EVIDENCE_BACKUP_SIZE="$backup_size"
+          export CME_EVIDENCE_BACKUP_SHA256="$backup_checksum"
+          export CME_EVIDENCE_POSTGRES_VERSION="$postgres_version"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence_dir = Path(os.environ["RUNNER_TEMP"]) / "cme-dr-evidence"
+          payload = {
+              "evidence_type": "isolated-postgresql-backup",
+              "result": "PASS",
+              "started_at_utc": os.environ["CME_EVIDENCE_BACKUP_STARTED"],
+              "completed_at_utc": os.environ["CME_EVIDENCE_BACKUP_COMPLETED"],
+              "duration_seconds": int(os.environ["CME_EVIDENCE_BACKUP_DURATION"]),
+              "size_bytes": int(os.environ["CME_EVIDENCE_BACKUP_SIZE"]),
+              "sha256": os.environ["CME_EVIDENCE_BACKUP_SHA256"],
+              "postgresql_server_version": os.environ["CME_EVIDENCE_POSTGRES_VERSION"],
+              "backup_file_retained": False,
+          }
+          (evidence_dir / "backup.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2) + "\\n", encoding="utf-8"
+          )
+          PY
       - name: Create separate disposable restore database
         env:
           PGPASSWORD: cme
@@ -119,11 +148,33 @@ jobs:
             echo '| Restore target | cme_restore (disposable database) |'
             echo '| Restore result | PASS |'
           } >> "$GITHUB_STEP_SUMMARY"
+          export CME_EVIDENCE_RESTORE_STARTED="$restore_started"
+          export CME_EVIDENCE_RESTORE_COMPLETED="$restore_completed"
+          export CME_EVIDENCE_RESTORE_DURATION="$restore_duration"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence_dir = Path(os.environ["RUNNER_TEMP"]) / "cme-dr-evidence"
+          payload = {
+              "evidence_type": "isolated-postgresql-restore",
+              "result": "PASS",
+              "started_at_utc": os.environ["CME_EVIDENCE_RESTORE_STARTED"],
+              "completed_at_utc": os.environ["CME_EVIDENCE_RESTORE_COMPLETED"],
+              "duration_seconds": int(os.environ["CME_EVIDENCE_RESTORE_DURATION"]),
+              "target_database": "cme_restore",
+              "target_kind": "disposable-ci-database",
+          }
+          (evidence_dir / "restore.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2) + "\\n", encoding="utf-8"
+          )
+          PY
       - name: Verify restored schema, indexes, data, and application readiness
         env:
           CME_DATABASE_URL: postgresql://cme:cme@localhost:5432/cme_restore
           CME_RESTORE_CONFIRM_DATABASE: cme_restore
-        run: python scripts/production/verify-restored-db.py
+        run: python scripts/production/verify-restored-db.py | tee "$RUNNER_TEMP/cme-dr-evidence/restore-verification.json"
       - name: Stage and verify a least-privilege runtime role in the isolated database
         env:
           CME_APP_ENV: test
@@ -138,6 +189,14 @@ jobs:
           python scripts/production/rotate-db-credentials.py
           test "$(stat -c %a "$CME_ROTATION_OUTPUT_FILE")" = 600
           ! grep -q 'cme:cme@' "$CME_ROTATION_OUTPUT_FILE"
+      - name: Upload sanitized DR evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cme-dr-restore-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cme-dr-evidence/
+          if-no-files-found: warn
+          retention-days: 90
 
   container:
     runs-on: ubuntu-latest
@@ -158,5 +217,18 @@ jobs:
           sudo apt-get install -y trivy
       - name: Generate SBOM
         run: syft cme-api:ci -o spdx-json=/tmp/cme-api.spdx.json
+      - name: Record local image identity
+        run: docker image inspect cme-api:ci --format '{{.Id}}' > /tmp/cme-image-id.txt
       - name: Scan image
-        run: trivy image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 cme-api:ci
+        run: trivy image --ignore-unfixed --severity HIGH,CRITICAL --format json --output /tmp/cme-trivy.json --exit-code 1 cme-api:ci
+      - name: Upload container supply-chain evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cme-container-supply-chain-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/cme-api.spdx.json
+            /tmp/cme-trivy.json
+            /tmp/cme-image-id.txt
+          if-no-files-found: warn
+          retention-days: 90
