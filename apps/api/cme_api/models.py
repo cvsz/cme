@@ -202,3 +202,63 @@ class JournalLine(Base):
     account_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     debit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal(0))
     credit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal(0))
+
+
+class ContentPublication(Base):
+    """Tenant-scoped publication record; provider delivery is not enabled."""
+
+    __tablename__ = "content_publications"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "organization_id", "id", name="uq_content_publications_scope"
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "organization_id",
+            "idempotency_key",
+            name="uq_content_publications_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "organization_id"],
+            ["organizations.tenant_id", "organizations.id"],
+            name="fk_content_publications_organization",
+            ondelete="RESTRICT",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PublicationOutboxEvent(Base):
+    """Outbox rows must be inserted in the same transaction as publication updates."""
+
+    __tablename__ = "publication_outbox_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "organization_id", "event_key", name="uq_publication_outbox_event_key"
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "organization_id", "publication_id"],
+            [
+                "content_publications.tenant_id",
+                "content_publications.organization_id",
+                "content_publications.id",
+            ],
+            name="fk_publication_outbox_publication_scope",
+            ondelete="RESTRICT",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    organization_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    publication_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False, index=True)
+    event_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
