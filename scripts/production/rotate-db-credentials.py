@@ -20,10 +20,12 @@ RUNTIME_TABLE_PRIVILEGES = {
     "audit_events": ("SELECT", "INSERT"),
     "auth_sessions": ("SELECT", "INSERT", "UPDATE"),
     "chart_accounts": ("SELECT",),
+    "content_publications": ("SELECT", "INSERT", "UPDATE"),
     "inventory_movements": ("SELECT",),
     "journal_entries": ("SELECT", "INSERT", "UPDATE"),
     "journal_lines": ("SELECT", "INSERT"),
     "organizations": ("SELECT",),
+    "publication_outbox_events": ("SELECT", "INSERT", "UPDATE"),
     "tenants": ("SELECT",),
     "users": ("SELECT",),
 }

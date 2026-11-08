@@ -25,6 +25,10 @@ class ProductionPreflightTests(unittest.TestCase):
             git("init", "-q")
             git("config", "user.email", "cme-test@example.invalid")
             git("config", "user.name", "CMe test")
+            # Insulate the temporary repository from the host's global Git
+            # signing policy so commit identity depends only on this test's
+            # inputs and not on an operator's GPG/passphrase configuration.
+            git("config", "commit.gpgsign", "false")
             (repo / "source.txt").write_text("committed source\n", encoding="utf-8")
             git("add", "source.txt")
             git("commit", "-qm", "test source")

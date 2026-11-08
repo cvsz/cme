@@ -16,7 +16,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED_SCHEMA_REVISION = "0004_accounting_journal"
+EXPECTED_SCHEMA_REVISION = "0005_content_publication"
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 IMAGE_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$", re.IGNORECASE)
 CHECKSUM_PATTERN = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)

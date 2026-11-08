@@ -1,9 +1,9 @@
 """Bootstrap startup tests: run with python3 -m unittest discover -s tests -v."""
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.bootstrap import initialize
 
