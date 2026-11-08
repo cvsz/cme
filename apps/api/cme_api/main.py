@@ -9,7 +9,7 @@ from cme_api.config import get_settings
 from cme_api.db import SessionLocal
 from cme_api.observability import RequestObservabilityMiddleware
 
-EXPECTED_SCHEMA_REVISION = "0004_accounting_journal"
+EXPECTED_SCHEMA_REVISION = "0005_content_publication"
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")

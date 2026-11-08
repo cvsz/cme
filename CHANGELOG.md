@@ -8,6 +8,7 @@ The format follows Keep a Changelog conventions; generated projects should adopt
 
 ### Added
 
+- Tenant-scoped content publication and transactional outbox foundation: `content_publications` and `publication_outbox_events` tables, additive Alembic migration `0005_content_publication`, schema-contract tests, and architecture documentation. `/ready` now requires schema revision `0005_content_publication`.
 - Safe project identity bootstrap with explicit dry-run/apply and idempotence tests.
 - Generated README/ABOUT templates and startup/profile documentation.
 - CI bootstrap test coverage and fail-closed Makefile placeholders.

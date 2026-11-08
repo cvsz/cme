@@ -79,8 +79,8 @@ def ready(base_url: str) -> bool:
                 response.status == 200
                 and body.get("status") == "ready"
                 and body.get("environment") == "production"
-                and body.get("schema_revision", "0004_accounting_journal")
-                == "0004_accounting_journal"
+                and body.get("schema_revision", "0005_content_publication")
+                == "0005_content_publication"
                 and body.get("dependencies", {"database": "ready", "redis": "ready"})
                 == {"database": "ready", "redis": "ready"}
             )
